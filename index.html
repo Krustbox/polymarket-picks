@@ -436,6 +436,10 @@
         <div id="statsBar" class="stats-bar" style="display: none;">
             <div class="stat">
                 <div class="stat-label">Portfolio Value</div>
+                <div class="stat-value" id="portfolioValue">$0.00</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Deployed Value</div>
                 <div class="stat-value" id="totalValue">$0.00</div>
             </div>
             <div class="stat">
@@ -534,6 +538,14 @@
                     loadBtn.disabled = false;
                     return;
                 }
+
+                // Fetch true portfolio value (includes won but not-yet-redeemed positions)
+                const allResponse = await fetch(
+                    `https://data-api.polymarket.com/positions?user=${WALLET}&sizeThreshold=0&limit=500`
+                );
+                const allPositions = allResponse.ok ? await allResponse.json() : [];
+                const portfolioValue = allPositions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
+                document.getElementById('portfolioValue').textContent = formatCurrency(portfolioValue);
 
                 // API already filters to redeemable=false; exclude any zero-value stragglers
                 const openPositions = positions.filter(p => (p.currentValue || 0) > 0);
