@@ -424,6 +424,7 @@
                     <option value="gameTime-desc">Game Time (Latest)</option>
                     <option value="value-desc">Position Value (Highest)</option>
                     <option value="pnl-desc">P&L (Best)</option>
+                    <option value="cost-desc">Cost Basis (Highest)</option>
                 </select>
                 <label class="checkbox-label">
                     <input type="checkbox" id="hideStartedCheckbox" onchange="sortAndRender()">
@@ -594,6 +595,10 @@
                     case 'pnl':
                         aVal = a.cashPnl || 0;
                         bVal = b.cashPnl || 0;
+                        break;
+                    case 'cost':
+                        aVal = a.initialValue || 0;
+                        bVal = b.initialValue || 0;
                         break;
                     default:
                         return 0;
