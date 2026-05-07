@@ -513,7 +513,7 @@
 
         document.addEventListener('DOMContentLoaded', loadPositions);
 
-        async function loadPositions() {
+async function loadPositions() {
             const content = document.getElementById('content');
             const statsBar = document.getElementById('statsBar');
             const loadBtn = document.getElementById('loadBtn');
@@ -539,18 +539,11 @@
                     return;
                 }
 
-                // Fetch true portfolio value (includes won but not-yet-redeemed positions)
-                const allResponse = await fetch(
-                    `https://data-api.polymarket.com/positions?user=${WALLET}&sizeThreshold=0&limit=500`
-                );
-                const allPositions = allResponse.ok ? await allResponse.json() : [];
-                const portfolioValue = allPositions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
-                document.getElementById('portfolioValue').textContent = formatCurrency(portfolioValue);
-
                 // API already filters to redeemable=false; exclude any zero-value stragglers
                 const openPositions = positions.filter(p => (p.currentValue || 0) > 0);
 
                 const totalValue = openPositions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
+                document.getElementById('portfolioValue').textContent = formatCurrency(totalValue);
                 const totalCost = openPositions.reduce((sum, p) => sum + (p.initialValue || 0), 0);
                 const totalPnl = openPositions.reduce((sum, p) => sum + (p.cashPnl || 0), 0);
 
