@@ -506,11 +506,11 @@
             <div class="controls" id="positionsControls">
                 <label for="sortSelect">Sort by:</label>
                 <select id="sortSelect" onchange="sortAndRender()">
+                    <option value="cost-desc">Cost Basis (Highest)</option>
                     <option value="gameTime-asc">Game Time (Soonest)</option>
                     <option value="gameTime-desc">Game Time (Latest)</option>
                     <option value="value-desc">Position Value (Highest)</option>
                     <option value="pnl-desc">P&L (Best)</option>
-                    <option value="cost-desc">Cost Basis (Highest)</option>
                 </select>
                 <label class="checkbox-label">
                     <input type="checkbox" id="hideStartedCheckbox" onchange="sortAndRender()">
@@ -542,6 +542,13 @@
             </div>
         </div>
 
+        <div id="searchBar" style="display:none; margin-bottom:16px;">
+            <div style="position:relative;width:100%;max-width:500px;margin:0 auto;">
+                <input type="text" id="searchInput" placeholder="Search markets..." style="width:100%;padding-right:36px;" oninput="onSearch()">
+                <button onclick="clearSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#ef4444;font-size:1.1rem;padding:0;width:20px;height:20px;line-height:1;cursor:pointer;box-shadow:none;" title="Clear">&#x2715;</button>
+            </div>
+        </div>
+
         <div id="content">
             <div class="empty">
                 <p>Enter your Polymarket wallet address to view your picks</p>
@@ -561,12 +568,26 @@
             document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
             document.getElementById('positionsControls').style.display = tab === 'positions' ? 'flex' : 'none';
             document.getElementById('statsBar').style.display = tab === 'positions' && positions.length ? 'flex' : 'none';
+            document.getElementById('searchInput').value = '';
 
             if (tab === 'positions') {
                 sortAndRender();
             } else {
                 loadHistory();
             }
+        }
+
+        function onSearch() {
+            if (currentTab === 'positions') {
+                sortAndRender();
+            } else if (historyCache) {
+                renderHistory(historyCache);
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            onSearch();
         }
 
         function refresh() {
@@ -607,11 +628,14 @@
 
         function renderHistory(trades) {
             const content = document.getElementById('content');
-            if (!trades.length) {
-                content.innerHTML = '<div class="empty"><p>No trade history found.</p></div>';
+            document.getElementById('searchBar').style.display = 'block';
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const filtered = query ? trades.filter(t => (t.title || '').toLowerCase().includes(query)) : trades;
+            if (!filtered.length) {
+                content.innerHTML = '<div class="empty"><p>No trades match your search.</p></div>';
                 return;
             }
-            const rows = trades.map(t => {
+            const rows = filtered.map(t => {
                 const side = t.side === 'BUY' ? 'buy' : 'sell';
                 const outcomeClass = t.outcomeIndex === 0 ? 'yes' : 'no';
                 const date = new Date(t.timestamp * 1000);
@@ -739,6 +763,7 @@ async function loadPositions() {
 
                 document.getElementById('positionCount').textContent = openPositions.length;
                 statsBar.style.display = 'flex';
+                document.getElementById('searchBar').style.display = 'block';
 
                 sortAndRender();
             } catch (error) {
@@ -754,8 +779,11 @@ async function loadPositions() {
             const [sortBy, direction] = sortValue.split('-');
             const hideStarted = document.getElementById('hideStartedCheckbox').checked;
 
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
             // API already returns only redeemable=false; exclude any zero-value stragglers
             let filtered = positions.filter(p => (p.currentValue || 0) > 0);
+            if (query) filtered = filtered.filter(p => (p.title || '').toLowerCase().includes(query));
 
             // Hide games that started more than 3 hours ago
             if (hideStarted) {
