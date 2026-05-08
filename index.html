@@ -544,6 +544,10 @@
                 <div class="stat-label">Open Positions</div>
                 <div class="stat-value" id="positionCount">0</div>
             </div>
+            <div class="stat">
+                <div class="stat-label">Claimable</div>
+                <div class="stat-value" id="claimableCount">0</div>
+            </div>
         </div>
 
         <div id="searchBar" style="display:none; margin-bottom:16px;">
@@ -634,7 +638,10 @@
             const content = document.getElementById('content');
             document.getElementById('searchBar').style.display = 'block';
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            const filtered = query ? trades.filter(t => (t.title || '').toLowerCase().includes(query)) : trades;
+            const filtered = query ? trades.filter(t =>
+                (t.title || '').toLowerCase().includes(query) ||
+                getLeagueFromSlug(t.slug).name.toLowerCase().includes(query)
+            ) : trades;
             if (!filtered.length) {
                 content.innerHTML = '<div class="empty"><p>No trades match your search.</p></div>';
                 return;
@@ -723,6 +730,23 @@
 
         document.addEventListener('DOMContentLoaded', loadPositions);
 
+        async function fetchClaimable() {
+            try {
+                const res = await fetch(
+                    `https://data-api.polymarket.com/positions?user=${WALLET}&sizeThreshold=0&redeemable=true&limit=500`
+                );
+                if (!res.ok) return { count: 0, value: 0 };
+                const data = await res.json();
+                const claimable = data.filter(p => (p.currentValue || 0) > 0);
+                return {
+                    count: claimable.length,
+                    value: claimable.reduce((sum, p) => sum + (p.currentValue || 0), 0)
+                };
+            } catch {
+                return { count: 0, value: 0 };
+            }
+        }
+
         async function fetchWalletBalance() {
             const pUSD = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
             const data = '0x70a08231000000000000000000000000' + WALLET.slice(2);
@@ -775,9 +799,13 @@ async function loadPositions() {
                 const openPositions = positions.filter(p => (p.currentValue || 0) > 0);
 
                 const totalValue = openPositions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
-                const walletBalance = await fetchWalletBalance();
+                const [walletBalance, claimable] = await Promise.all([
+                    fetchWalletBalance(),
+                    fetchClaimable()
+                ]);
                 document.getElementById('cashBalance').textContent = formatCurrency(walletBalance);
-                document.getElementById('portfolioValue').textContent = formatCurrency(totalValue + walletBalance);
+                document.getElementById('portfolioValue').textContent = formatCurrency(totalValue + claimable.value + walletBalance);
+                document.getElementById('claimableCount').textContent = claimable.count;
                 const totalCost = openPositions.reduce((sum, p) => sum + (p.initialValue || 0), 0);
                 const totalPnl = openPositions.reduce((sum, p) => sum + (p.cashPnl || 0), 0);
 
@@ -811,7 +839,10 @@ async function loadPositions() {
 
             // API already returns only redeemable=false; exclude any zero-value stragglers
             let filtered = positions.filter(p => (p.currentValue || 0) > 0);
-            if (query) filtered = filtered.filter(p => (p.title || '').toLowerCase().includes(query));
+            if (query) filtered = filtered.filter(p =>
+                (p.title || '').toLowerCase().includes(query) ||
+                getLeagueFromSlug(p.slug).name.toLowerCase().includes(query)
+            );
 
             // Hide games that started more than 3 hours ago
             if (hideStarted) {
