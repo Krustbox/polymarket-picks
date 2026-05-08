@@ -719,6 +719,28 @@
 
         document.addEventListener('DOMContentLoaded', loadPositions);
 
+        async function fetchWalletBalance() {
+            const pUSD = '0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB';
+            const data = '0x70a08231000000000000000000000000' + WALLET.slice(2);
+            try {
+                const res = await fetch('https://polygon.drpc.org', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{ to: pUSD, data }, 'latest'],
+                        id: 1
+                    })
+                });
+                const json = await res.json();
+                if (!json.result || json.result === '0x') return 0;
+                return Number(BigInt(json.result)) / 1e6;
+            } catch {
+                return 0;
+            }
+        }
+
 async function loadPositions() {
             const content = document.getElementById('content');
             const statsBar = document.getElementById('statsBar');
@@ -749,7 +771,8 @@ async function loadPositions() {
                 const openPositions = positions.filter(p => (p.currentValue || 0) > 0);
 
                 const totalValue = openPositions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
-                document.getElementById('portfolioValue').textContent = formatCurrency(totalValue);
+                const walletBalance = await fetchWalletBalance();
+                document.getElementById('portfolioValue').textContent = formatCurrency(totalValue + walletBalance);
                 const totalCost = openPositions.reduce((sum, p) => sum + (p.initialValue || 0), 0);
                 const totalPnl = openPositions.reduce((sum, p) => sum + (p.cashPnl || 0), 0);
 
