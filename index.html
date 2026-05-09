@@ -733,14 +733,14 @@
         async function fetchClaimable() {
             try {
                 const res = await fetch(
-                    `https://data-api.polymarket.com/positions?user=${WALLET}&sizeThreshold=0&redeemable=true&sortBy=RESOLVING&sortDirection=DESC&limit=50`
+                    `https://data-api.polymarket.com/positions?user=${WALLET}&sizeThreshold=0&redeemable=true&sortBy=CURRENT&sortDirection=DESC&limit=50`
                 );
                 if (!res.ok) return { count: 0, value: 0 };
                 const data = await res.json();
-                const claimable = data.filter(p => (p.curPrice || 0) === 1);
+                const claimable = data.filter(p => (p.currentValue || 0) > 0);
                 return {
                     count: claimable.length,
-                    value: claimable.reduce((sum, p) => sum + (p.size || 0), 0)
+                    value: claimable.reduce((sum, p) => sum + (p.currentValue || 0), 0)
                 };
             } catch {
                 return { count: 0, value: 0 };
