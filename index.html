@@ -305,6 +305,12 @@
             margin-top: 3px;
         }
 
+        .american-odds {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #a1a1aa;
+        }
+
         /* P&L Section */
         .pnl-section {
             display: flex;
@@ -646,6 +652,8 @@
                 content.innerHTML = '<div class="empty"><p>No trades match your search.</p></div>';
                 return;
             }
+            const positionByCondition = Object.fromEntries(positions.map(p => [p.conditionId, p]));
+
             const rows = filtered.map(t => {
                 const side = t.side === 'BUY' ? 'buy' : 'sell';
                 const outcomeClass = t.outcomeIndex === 0 ? 'yes' : 'no';
@@ -664,6 +672,7 @@
                         <td style="text-align:right">${formatNumber(t.size)}</td>
                         <td style="text-align:right">${formatCurrency(t.usdcSize)}</td>
                         <td style="text-align:right">${formatPrice(t.price)}</td>
+                        <td style="text-align:right">${positionByCondition[t.conditionId] ? formatCurrency(positionByCondition[t.conditionId].initialValue) : '—'}</td>
                     </tr>`;
             }).join('');
 
@@ -678,6 +687,7 @@
                             <th style="text-align:right">Shares</th>
                             <th style="text-align:right">Amount</th>
                             <th style="text-align:right">Price</th>
+                            <th style="text-align:right">Cost Basis</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -923,7 +933,7 @@ async function loadPositions() {
                         </div>
                         <div class="detail">
                             <div class="detail-label">Avg Price</div>
-                            <div class="detail-value">${formatPrice(position.avgPrice)}</div>
+                            <div class="detail-value">${formatPrice(position.avgPrice)} <span class="american-odds">${toAmericanOdds(position.avgPrice)}</span></div>
                         </div>
                         <div class="detail">
                             <div class="detail-label">Current Price</div>
@@ -965,6 +975,15 @@ async function loadPositions() {
         function formatNumber(value) {
             if (value == null) return '0';
             return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+
+        function toAmericanOdds(price) {
+            if (price == null || price <= 0 || price >= 1) return '';
+            if (price >= 0.5) {
+                return '-' + Math.round((price / (1 - price)) * 100);
+            } else {
+                return '+' + Math.round(((1 - price) / price) * 100);
+            }
         }
 
         function formatGameTime(dateString) {
